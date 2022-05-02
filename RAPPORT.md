@@ -3,7 +3,11 @@ author:
     - Matthieu BREUIL (e2102555)
 ---
 
-# Rapport microprocesseur
+## Notes
+Le projet suivant a été réalisé sur logisim 2.16.1.4 .exe sur Windows 11.
+Attention, lorsque vous suivrez la partie **Faire fonctionner le microprocesseur**, il faudra bien suivre les clics proposés : en effet, on pourrait se dire qu'après avoir fait tourner le programme, cliquer immédiatement sur le circuit noté **RAM** dans la barre des circuits nous montrera la ram active, mais non, il faut repasser par le circuit **microprocesseur** dans tous les cas pour observer l'état de n'importe quel circuit.
+
+# Fonctionnement microprocesseur
 
 ## Unité logique 8 bits
 Dans cette partie, on nous demande de créér des opérateurs logiques (and, or, xor) sur 8 bits.
@@ -54,6 +58,7 @@ S    = A XOR B XOR RIN
 ```
 
 Ce qui fait un additionneur en 5 portes logiques (2x XOR, 2x AND, 1x OR):
+
 - A.B       (utilisé 1 fois)
 - A XOR B   (utilisé 2 fois)
 - (A XOR B) XOR RIN (utilisé 1 fois)
@@ -62,6 +67,7 @@ Ce qui fait un additionneur en 5 portes logiques (2x XOR, 2x AND, 1x OR):
 
 ## Conception de l'UAL
 Dans cette partie, on va créér une UAL prenant deux opérandes 8 bits et en ressortant une des opérations suivantes :
+
 - add
 - and
 - or
@@ -70,6 +76,7 @@ Dans cette partie, on va créér une UAL prenant deux opérandes 8 bits et en re
 - xor
 - nxor
 - not
+
 Comme on a 8 opérations, on va utiliser un multiplexeur prenant 3 bits de contrôle (2^3 == 8) et prenant des opérandes de 8 bits en entrée et en sortie. Les signaux de contrôle correspondent à l'ordre de la liste précédente (000 pour add, 001 pour and, ...). La manière dont notre UAL est implémentée fait qu'à chaque fois que celle-ci est solicitée elle utilise toutes les opérations disponibles sur les opérandes, et choisie la bonne en sortie à l'aide du plexeur. Ce n'est pas très réaliste car à chaquer cycle, une seule opération peut être retournée par notre UAL, néanmoins, cette implémentation est suffisante pour la suite de notre microprocesseur. 
 
 ## Conception du banc de registres
@@ -82,6 +89,7 @@ Rien à signaler, en remplissant les registres au préalable et en testant le re
 Dans cette partie, nous allons définir complètement notre jeu d'instructions afin de définir le nombre de bits à allouer par instructions (constant car nous implémentons un RISC).
 
 ### Opérations logiques
+
 - and  r1, r2, r3
 - nand r1, r2, r3
 - or   r1, r2, r3
@@ -91,9 +99,11 @@ Dans cette partie, nous allons définir complètement notre jeu d'instructions a
 - not  r1, r2
 
 ### Opérations mathématiques
+
 - add r1, r2, r3
 
 ### Opérations autres
+
 - load r1, const
 - load r1, from addr
 - mov r1, r2
@@ -140,6 +150,7 @@ Nous allons donc paramétrer une ROM avec comme largeur de mots 16 bits. Nous ad
 
 ### Conception de nos circuits de décodage de l'instruction 
 L'instruction de 16 bits est envoyé sur un premier décodeur qui consiste simplement à splitter nos 16 bits en 3 groupes :
+
 - les 2 bits de poids forts décrivent si l'instruction est de type math/logique (00), load/store (01) ou jump (10). 
 - les 3 suivants décrivent l'opération à effectuer (voir ci-dessus) et les 11 suivants composent le payload propre à chaque instruction.
 
@@ -190,7 +201,7 @@ Nous allons coder la somme des 4 premiers entiers, voici son code en python sach
 def sum():
     ret  = 0
     i    = 1
-    while i+251 != 0:
+    while i+251 != 0: # L'astuce c'est de faire un overflow de notre registre de comptage
         ret += i
         i   += 1
     return ret
@@ -198,5 +209,21 @@ def sum():
 Et le code assembleur se trouve dans le fichier **asm/sum.asm**. Pour l'assembler, il vous suffit d'avoir python et de lancer la commande suivante `python3 compilateur.py -i sum.asm > rom/sum.rom` qui enregistrera la rom au format logisim dans le fichier **rom/sum.rom** (la rom est déjà assemblée si vous préferez). Ensuite, chargez la rom dans le bloc PC, composante rom du microprocesseur et faite dérouler le programme jusqu'à arriver sur l'instruction **0000** (attention, ne pas l'executer). Si vous allez en RAM, vous verrez qu'en 0x00, nous avons bien 1+2+3+4 = 10 = 0x0a. N'hésitez pas à coder vos programmes et vous amuser !
 
 ## Améliorations en vue pour la suite
+
 - Ajouter un troisième mode de modification du PC par incrémentation selon un offset relatif
 - Ajouter un registre de flags, et une opération de comparaison permettant d'aller set des bits de ce registre. Ainsi, nos opérations de jmp conditionnels pourront découler non pas de la comparaison d'un registre avec zero mais de bits set ou non dans notre registre des drapeaux.
+- Optimiser tous les circuits en taille/perfs (utiliser des portes nand, transformer notre additionneur afin qu'il ne soit plus à propagation de retenue)
+- Rendre requetable notre registre de pointeur programme
+- Créer une instruction nop pour remplir la fin de notre rom et eviter les effets de bords, ou alors une interruption pause
+
+## Faire fonctionner le microprocesseur
+Pour ce faire :
+
+- Lancer logisim : Fichier > Ouvrir > **logisim_microproc/microproc.circ**
+- Double cliquer sur le circuit **microprocesseur**
+- Double cliquer sur le circuit **PC_AND_ROM** situé tout à gauche, en dessous de l'horloge
+- Clic droit sur la rom > Charger l'image > **roms/sum.rom** pour charger le programme qui va faire la somme des 4 premiers entiers en @0x00 de la RAM
+- Vous pouvez faire ctrl+t pour faire ticker l'horloge : lorsque la rom pointe sur 0000 (attention, pointe mais n'a pas encore executé !) vous pourrez remarquer en allant dans la ram (double clic sur le circuit microprocesseur dans la barre des circuits, puis double clic sur la ram qui est **en dessous du circuit PC_AND_ROM**, noté **RAM**) qu'en @0x00, il y a bien 1+2+3+4 = 10 = 0x0a.
+
+## Conclusion
+Ce microprocesseur était un projet vraiment intéressant, j'ai pris un grand plaisir à le réaliser : j'aurais préféré avoir plus d'heures afin de rendre ce microprocesseur plus propre, nottament au niveau de l'optimisation des circuits. Je suis aussi conscient de l'abstraction proposée par logisim (tout se fait en 1 cycle...).

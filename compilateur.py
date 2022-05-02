@@ -100,7 +100,8 @@ class Compile():
         else:                    return int(complete("01011" + self._reg[payload[0]] + self._reg[payload[1]]), 2).to_bytes(2, "big")
 
     def _jmp(self, payload):
-        if payload[0][0] == "@": return int(complete("10000" + self._is_label(payload[1][1:])), 2).to_bytes(2, "big")
+        c = lambda z: "0"*(8-len(z)) + z
+        if payload[0][0] == "@": return int(complete("10000" + (c(bin(int(payload[0][1:]))[2:]) if payload[0][1:3] != "0x" else c(bin(int(payload[0][3:], 16))[2:]))), 2).to_bytes(2, "big")
         else:                    return int(complete("10001" + self._reg[payload[0]]), 2).to_bytes(2, "big")
 
     def _jz(self, payload): 
